@@ -1,0 +1,130 @@
+---
+name: 'Robert'
+surname: 'Allaway'
+position: "Principal Scientist"
+address: "11203 10th Avenue SW, Seattle, WA"
+phone: '+1 301 461 6927'
+www: 'orcid.org/0000-0003-3573-3565'
+email: "robert.j.allaway@gmail.com"
+linkedin: 'robertallaway'
+github: 'allaway'
+date: "`r format(Sys.time(), '%B %Y')`"
+csl: 'jama.csl'
+output: 
+  vitae::awesomecv:
+    page_total: true
+---
+
+```{r setup, include=FALSE}
+options(tinytex.verbose = TRUE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(vitae)
+library(tidyverse)
+library(rorcid)
+library(lubridate)
+library(scholar)
+```
+
+# Job History
+
+```{r}
+
+jobs <- read_csv("data/jobs.csv") %>% 
+  mutate(Start = mdy(Start),
+         End = mdy(End)) %>% 
+  mutate(When = case_when(
+    is.na(End) ~ glue::glue("{year(Start)} - Present") %>% as.character(),
+    !is.na(End) ~ glue::glue("{year(Start)} - {year(End)}") %>% as.character()
+  )) %>% 
+  arrange(desc(Start))
+  
+
+##intentionally flip With and What for nicer rendering (i.e. title is more pronounced)
+jobs %>% 
+  detailed_entries(
+    with = What,
+    when = When,
+    what = With,
+    where = Where
+    )
+
+
+```
+
+# Education
+```{r}
+
+edu <- do.call("bind_rows",
+  rorcid::orcid_educations("0000-0003-3573-3565")$`0000-0003-3573-3565`$`affiliation-group`$summaries)
+
+edu %>%
+  detailed_entries(
+    what = `education-summary.role-title`,
+    when = glue::glue("{`education-summary.start-date.year.value`} - {`education-summary.end-date.year.value`}"),
+    with = `education-summary.organization.name`,
+    where = glue::glue(
+      '{`education-summary.organization.address.city`}, {`education-summary.organization.address.region`}, {`education-summary.organization.address.country`}')
+  )
+
+```
+
+
+
+# Selected Publications
+(*indicates co-first authors, ^indicates co-corresponding authors)
+```{r}
+bibliography_entries("data/works.bib") %>%
+  arrange(desc(issued))
+```
+
+# Society Membership
+
+```{r}
+mem <- do.call("bind_rows",
+  rorcid::orcid_memberships("0000-0003-3573-3565")$`0000-0003-3573-3565`$`affiliation-group`$summaries) %>% 
+    mutate(Start = `membership-summary.start-date.year.value`,
+         End = `membership-summary.end-date.year.value`) %>% 
+  mutate(When = case_when(
+    is.na(End) ~ glue::glue("{Start} - Present") %>% as.character(),
+    !is.na(End) ~ glue::glue("{Start} - {End}") %>% as.character()
+  )) %>% 
+  arrange(desc(Start))
+
+mem %>%
+  detailed_entries(
+    what = `membership-summary.role-title`,
+    when = When,
+    with = `membership-summary.organization.name`
+  )
+```
+
+# Peer Review and Service
+
+```{r}
+tribble(
+  ~what, ~with, 
+  "Manuscript Reviewer", "Bioinformatics, Journal of Cheminformatics, BMC Cancer, Journal of Cellular and Molecular Medicine, PLoS Computational Biology",
+  "Grant Reviewer", "Children's Tumor Foundation, CD2H Idea Competition",
+  "Mentor and Co-Organizer", "2019 Neurofibromatosis Hackathon, 2020 Neurofibromatosis Hackathon, 2021 Hack4Rare, 2022 Hack4NF (in development)"
+) %>% 
+  detailed_entries(what = with, 
+                   with = what)
+```
+
+# Awards
+
+```{r}
+
+awards <- read_csv("data/awards.csv") %>% 
+  mutate(When = case_when(
+    is.na(End) ~ glue::glue("{Start}") %>% as.character(),
+    !is.na(End) ~ glue::glue("{Start} - {End}") %>% as.character()
+  )) %>% 
+  arrange(desc(Start))
+
+awards %>% 
+  detailed_entries(what = What,
+                   when = When, 
+                   with = With,
+                   why = Why)
+```
